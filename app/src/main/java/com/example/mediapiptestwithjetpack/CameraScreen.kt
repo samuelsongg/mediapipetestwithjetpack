@@ -51,30 +51,13 @@ fun CameraScreen(
         cameraPermissionState.launchPermissionRequest()
     }
 
-    // Initialise GestureRecognitionHelper
-    gestureRecognizerHelper = remember {
-        GestureRecognizerHelper(
-            context = context,
-            gestureRecognizerListener = object : GestureRecognizerHelper.GestureRecognizerListener {
-                override fun onError(error: String, errorCode: Int) {
-                    TODO("Not yet implemented")
-                }
-
-                override fun onResults(resultBundle: GestureRecognizerHelper.ResultBundle) {
-                    TODO("Not yet implemented")
-                }
-            }
-        )
-    }
-
     CameraSetup(
-        navController = navController,
-        gestureRecognizerHelper = gestureRecognizerHelper
+        navController = navController
     )
 }
 
 @Composable
-fun CameraSetup(navController: NavController, gestureRecognizerHelper: GestureRecognizerHelper) {
+fun CameraSetup(navController: NavController) {
     val context: Context = LocalContext.current
     val lifecycleOwner: LifecycleOwner = LocalLifecycleOwner.current
     val cameraController: LifecycleCameraController = remember { LifecycleCameraController(context) }
@@ -107,14 +90,9 @@ fun CameraSetup(navController: NavController, gestureRecognizerHelper: GestureRe
                             .build()
                         previewView.controller = cameraController
                         cameraController.cameraSelector = cameraSelector
-//                        cameraController.bindToLifecycle(lifecycleOwner)
+                        cameraController.bindToLifecycle(lifecycleOwner)
                     }
                 }
-            )
-
-            // Pass image to Gesture Recognizer Logic
-            gestureRecognizerHelper.recognizeLiveStream(
-                imageProxy = TODO()
             )
         }
     }
@@ -125,12 +103,8 @@ fun GestureResults() {
     // TODO Text box to display gestures.
 }
 
-fun createGestureRecognitionHelper() {
-
+fun recognizeHand(gestureRecognizerHelper: GestureRecognizerHelper, imageProxy: ImageProxy) {
+    gestureRecognizerHelper.recognizeLiveStream(
+        imageProxy = imageProxy
+    )
 }
-
-//fun recognizeHand(imageProxy: ImageProxy) {
-//    gestureRecognizerHelper.recognizeLiveStream(
-//        imageProxy = imageProxy
-//    )
-//}
