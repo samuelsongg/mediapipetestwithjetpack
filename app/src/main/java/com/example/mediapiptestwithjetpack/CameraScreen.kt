@@ -2,13 +2,17 @@ package com.example.mediapiptestwithjetpack
 
 import android.annotation.SuppressLint
 import android.content.Context
+import androidx.camera.core.*
 import android.graphics.Color
 import android.util.Size
 import android.view.ViewGroup
 import android.widget.LinearLayout
+import androidx.camera.core.AspectRatio
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
+import androidx.camera.core.Preview
+import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.LifecycleCameraController
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.layout.Box
@@ -33,6 +37,7 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 @SuppressLint("PermissionLaunchedDuringComposition")
@@ -56,18 +61,33 @@ fun CameraScreen(
     )
 }
 
+@SuppressLint("RestrictedApi")
 @Composable
 fun CameraSetup(navController: NavController) {
+    lateinit var gestureRecognizerHelper: GestureRecognizerHelper
+    lateinit var backgroundExecutor: ExecutorService
+    backgroundExecutor=Executors.newSingleThreadExecutor()
+
+    var cameraProvider: ProcessCameraProvider? = null
+    var camera: Camera? = null
+    var imageAnalyzer: ImageAnalysis? = null
     val context: Context = LocalContext.current
     val lifecycleOwner: LifecycleOwner = LocalLifecycleOwner.current
     val cameraController: LifecycleCameraController = remember { LifecycleCameraController(context) }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            cameraController.unbind()
+            imageAnalyzer?.clearAnalyzer()
+        }
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = { navController.popBackStack() }
-                ) {
+            ) {
                 Text(text = "Back")
             }
         }
@@ -88,9 +108,36 @@ fun CameraSetup(navController: NavController) {
                         val cameraSelector = CameraSelector.Builder()
                             .requireLensFacing(CameraSelector.LENS_FACING_FRONT)
                             .build()
+
+                        val preview = Preview.Builder()
+                            .setTargetAspectRatio(AspectRatio.RATIO_4_3)
+                            .setDefaultResolution(Size(640,480))
+                            .build()
+
+                        imageAnalyzer = ImageAnalysis.Builder()
+                            .setTargetAspectRatio(AspectRatio.RATIO_4_3)
+                            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                            .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
+                            .build()
+                            .also {
+                                it.setAnalyzer(backgroundExecutor) { image ->
+                                    recognizeHand(gestureRecognizerHelper, image)
+                                }
+                            }
+
                         previewView.controller = cameraController
                         cameraController.cameraSelector = cameraSelector
                         cameraController.bindToLifecycle(lifecycleOwner)
+
+                        // Camera just shows a black screen???
+//                        cameraProvider?.let { provider ->
+//                            camera = provider.bindToLifecycle(
+//                                lifecycleOwner, cameraSelector, preview
+//                            )
+//                            provider.bindToLifecycle(
+//                                lifecycleOwner, cameraSelector, imageAnalyzer
+//                            )
+//                        }
                     }
                 }
             )

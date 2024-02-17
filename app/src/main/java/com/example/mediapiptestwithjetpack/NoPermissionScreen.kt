@@ -54,3 +54,22 @@ fun NoPermissionContent(
         }
     }
 }
+
+//cameraController.cameraSelector = cameraSelector
+////                        cameraController.bindToLifecycle(lifecycleOwner)
+//
+//cameraProvider?.unbindAll()
+//
+//camera = cameraProvider?.bindToLifecycle(
+//lifecycleOwner, cameraSelector, preview, imageAnalyzer
+//)
+//
+//previewView.controller = cameraController
+////                        cameraProvider?.let { provider ->
+////                            camera = provider.bindToLifecycle(
+////                                lifecycleOwner, cameraSelector, preview
+////                            )
+////                            provider.bindToLifecycle(
+////                                lifecycleOwner, cameraSelector, imageAnalyzer
+////                            )
+////                        }

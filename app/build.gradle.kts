@@ -81,6 +81,8 @@ dependencies {
 //    // CameraX View class
 //    implementation("androidx.camera:camera-view:1.2.0-alpha02")
 //
+//    implementation("androidx.camera:camera-extensions:1.2.0-alpha02")
+//
 //    // Mediapipe Library
 //    implementation("com.google.mediapipe:tasks-vision:0.10.0")
 
