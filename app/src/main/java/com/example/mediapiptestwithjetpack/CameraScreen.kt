@@ -26,6 +26,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.Recomposer
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -50,40 +53,62 @@ fun CameraScreen(
     modifier: Modifier = Modifier,
     navController: NavController
 ){
-    lateinit var gestureRecognizerHelper: GestureRecognizerHelper
-    var context = LocalContext.current
-
+    val context = LocalContext.current
+    val gestureResultState = remember { mutableStateOf<GestureRecognizerHelper.ResultBundle?>(null) }
     val cameraPermissionState: PermissionState = rememberPermissionState(android.Manifest.permission.CAMERA)
+
+    val gestureRecognizerHelper = remember {
+        GestureRecognizerHelper(
+            context = context,
+            runningMode = RunningMode.LIVE_STREAM,
+            gestureRecognizerListener = object : GestureRecognizerHelper.GestureRecognizerListener {
+                override fun onResults(resultBundle: GestureRecognizerHelper.ResultBundle) {
+                    Log.d("GestureResults", "Gesture recognized with results: ${resultBundle.results}")
+                }
+
+                override fun onError(error: String, errorCode: Int) {
+                    // Log any errors encountered during gesture recognition
+                    Log.e("GestureResults", "Error recognizing gestures: $error")
+                }
+            }
+        )
+    }
 
     if (!cameraPermissionState.status.isGranted) {
         cameraPermissionState.launchPermissionRequest()
     }
 
-    CameraSetup(
-        navController = navController
-    )
+    CameraSetup(navController = navController, gestureRecognizerHelper = gestureRecognizerHelper)
 }
+
+
+
 
 @SuppressLint("RestrictedApi")
 @Composable
-fun CameraSetup(navController: NavController) {
-    //lateinit var gestureRecognizerHelper: GestureRecognizerHelper
+fun CameraSetup(navController: NavController,gestureRecognizerHelper:GestureRecognizerHelper) {
+
     lateinit var backgroundExecutor: ExecutorService
     backgroundExecutor=Executors.newSingleThreadExecutor()
 
-    var cameraProvider: ProcessCameraProvider? = null
-    var camera: Camera? = null
-    var imageAnalyzer: ImageAnalysis? = null
     val context: Context = LocalContext.current
     val lifecycleOwner: LifecycleOwner = LocalLifecycleOwner.current
     val cameraController: LifecycleCameraController = remember { LifecycleCameraController(context) }
 
-    val gestureRecognizerHelper = remember {
-        GestureRecognizerHelper(
-            context = context,
-            runningMode=RunningMode.VIDEO
-        )
-    }
+//    val gestureRecognizerHelper = remember {
+//        GestureRecognizerHelper(
+//            context = context,
+//            runningMode=RunningMode.LIVE_STREAM,
+//            gestureRecognizerListener = object : GestureRecognizerHelper.GestureRecognizerListener {
+//                override fun onResults(resultBundle: GestureRecognizerHelper.ResultBundle) {
+//                    // Handle the results here
+//                }
+//                override fun onError(error: String, errorCode: Int) {
+//                    // Handle the error here
+//                }
+//            }
+//        )
+//    }
 
 // Set the target rotation and backpressure strategy if needed
     cameraController.setImageAnalysisBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
@@ -91,10 +116,10 @@ fun CameraSetup(navController: NavController) {
 // Set the analyzer for the camera controller
     cameraController.setImageAnalysisAnalyzer(backgroundExecutor) { imageProxy ->
         try {
-            if (imageProxy.format == ImageFormat.YUV_420_888 || imageProxy.format == ImageFormat.JPEG) {
+
                 // Perform the analysis on the image
                 recognizeHand(gestureRecognizerHelper, imageProxy)
-            }
+
         } finally {
             // Make sure to close the image to prevent memory leaks and ensure the next image is received
             imageProxy.close()
@@ -151,7 +176,6 @@ fun GestureResults() {
 }
 
 fun recognizeHand(gestureRecognizerHelper: GestureRecognizerHelper, imageProxy: ImageProxy) {
-    Log.d("Deez","Working")
     gestureRecognizerHelper.recognizeLiveStream(
         imageProxy = imageProxy
     )
