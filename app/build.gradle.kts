@@ -83,8 +83,8 @@ dependencies {
 //
 //    implementation("androidx.camera:camera-extensions:1.2.0-alpha02")
 //
-//    // Mediapipe Library
-//    implementation("com.google.mediapipe:tasks-vision:0.10.0")
+    // Mediapipe Library
+    implementation("com.google.mediapipe:tasks-vision:0.10.0")
 
     // CameraX core library
     implementation("androidx.camera:camera-core:1.3.1")
@@ -100,9 +100,10 @@ dependencies {
 
     implementation("androidx.camera:camera-extensions:1.3.1")
 
-    // Mediapipe Library
-    implementation("com.google.mediapipe:tasks-vision:0.20230731")
+//    // Mediapipe Library
+//    implementation("com.google.mediapipe:tasks-vision:0.20230731")
 
     // Permissions
     implementation ("com.google.accompanist:accompanist-permissions:0.34.0")
+
 }

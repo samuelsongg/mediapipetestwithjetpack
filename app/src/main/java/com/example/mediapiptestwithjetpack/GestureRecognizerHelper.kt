@@ -3,6 +3,7 @@ package com.example.mediapiptestwithjetpack
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Matrix
+
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.SystemClock
@@ -26,6 +27,7 @@ class GestureRecognizerHelper(
     val context: Context,
     val gestureRecognizerListener: GestureRecognizerListener? = null
 ) {
+
 
     // For this example this needs to be a var so it can be reset on changes. If the GestureRecognizer
     // will not change, a lazy val would be preferable.
@@ -103,7 +105,8 @@ class GestureRecognizerHelper(
         imageProxy: ImageProxy,
     ) {
         val frameTime = SystemClock.uptimeMillis()
-
+        val format = imageProxy.format
+        Log.d("Running","format:${format}")
         // Copy out RGB bits from the frame to a bitmap buffer
         val bitmapBuffer = Bitmap.createBitmap(
             imageProxy.width, imageProxy.height, Bitmap.Config.ARGB_8888

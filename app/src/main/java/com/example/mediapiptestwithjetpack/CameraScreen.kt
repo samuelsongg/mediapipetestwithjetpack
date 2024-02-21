@@ -4,6 +4,8 @@ import android.annotation.SuppressLint
 import android.content.Context
 import androidx.camera.core.*
 import android.graphics.Color
+import android.graphics.ImageFormat
+import android.util.Log
 import android.util.Size
 import android.view.ViewGroup
 import android.widget.LinearLayout
@@ -37,6 +39,7 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import com.google.mediapipe.tasks.vision.core.RunningMode
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -64,7 +67,7 @@ fun CameraScreen(
 @SuppressLint("RestrictedApi")
 @Composable
 fun CameraSetup(navController: NavController) {
-    lateinit var gestureRecognizerHelper: GestureRecognizerHelper
+    //lateinit var gestureRecognizerHelper: GestureRecognizerHelper
     lateinit var backgroundExecutor: ExecutorService
     backgroundExecutor=Executors.newSingleThreadExecutor()
 
@@ -75,10 +78,33 @@ fun CameraSetup(navController: NavController) {
     val lifecycleOwner: LifecycleOwner = LocalLifecycleOwner.current
     val cameraController: LifecycleCameraController = remember { LifecycleCameraController(context) }
 
+    val gestureRecognizerHelper = remember {
+        GestureRecognizerHelper(
+            context = context,
+            runningMode=RunningMode.VIDEO
+        )
+    }
+
+// Set the target rotation and backpressure strategy if needed
+    cameraController.setImageAnalysisBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+
+// Set the analyzer for the camera controller
+    cameraController.setImageAnalysisAnalyzer(backgroundExecutor) { imageProxy ->
+        try {
+            if (imageProxy.format == ImageFormat.YUV_420_888 || imageProxy.format == ImageFormat.JPEG) {
+                // Perform the analysis on the image
+                recognizeHand(gestureRecognizerHelper, imageProxy)
+            }
+        } finally {
+            // Make sure to close the image to prevent memory leaks and ensure the next image is received
+            imageProxy.close()
+        }
+    }
+
     DisposableEffect(Unit) {
         onDispose {
             cameraController.unbind()
-            imageAnalyzer?.clearAnalyzer()
+            backgroundExecutor.shutdownNow()
         }
     }
 
@@ -92,52 +118,25 @@ fun CameraSetup(navController: NavController) {
             }
         }
     ) { paddingValues: PaddingValues ->
-
         Box(modifier = Modifier.fillMaxSize()) {
             AndroidView(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues),
                 factory = { context ->
-                    PreviewView(context).apply {
-                        layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-                        setBackgroundColor(Color.BLACK)
-                        implementationMode = PreviewView.ImplementationMode.COMPATIBLE
-                        scaleType = PreviewView.ScaleType.FILL_START
-                    }.also { previewView ->
+                    PreviewView(context).also { previewView ->
+                        previewView.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+                        previewView.setBackgroundColor(Color.BLACK)
+                        previewView.implementationMode = PreviewView.ImplementationMode.COMPATIBLE
+                        previewView.scaleType = PreviewView.ScaleType.FILL_START
+                        previewView.controller = cameraController // This line is correct and needed
+
+                        // Setting up the camera selector for the camera controller
                         val cameraSelector = CameraSelector.Builder()
                             .requireLensFacing(CameraSelector.LENS_FACING_FRONT)
                             .build()
-
-                        val preview = Preview.Builder()
-                            .setTargetAspectRatio(AspectRatio.RATIO_4_3)
-                            .setDefaultResolution(Size(640,480))
-                            .build()
-
-                        imageAnalyzer = ImageAnalysis.Builder()
-                            .setTargetAspectRatio(AspectRatio.RATIO_4_3)
-                            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                            .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
-                            .build()
-                            .also {
-                                it.setAnalyzer(backgroundExecutor) { image ->
-                                    recognizeHand(gestureRecognizerHelper, image)
-                                }
-                            }
-
-                        previewView.controller = cameraController
                         cameraController.cameraSelector = cameraSelector
                         cameraController.bindToLifecycle(lifecycleOwner)
-
-                        // Camera just shows a black screen???
-//                        cameraProvider?.let { provider ->
-//                            camera = provider.bindToLifecycle(
-//                                lifecycleOwner, cameraSelector, preview
-//                            )
-//                            provider.bindToLifecycle(
-//                                lifecycleOwner, cameraSelector, imageAnalyzer
-//                            )
-//                        }
                     }
                 }
             )
@@ -145,12 +144,14 @@ fun CameraSetup(navController: NavController) {
     }
 }
 
+
 @Composable
 fun GestureResults() {
     // TODO Text box to display gestures.
 }
 
 fun recognizeHand(gestureRecognizerHelper: GestureRecognizerHelper, imageProxy: ImageProxy) {
+    Log.d("Deez","Working")
     gestureRecognizerHelper.recognizeLiveStream(
         imageProxy = imageProxy
     )
