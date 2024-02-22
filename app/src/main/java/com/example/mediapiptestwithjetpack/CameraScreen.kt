@@ -30,9 +30,11 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Recomposer
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.LifecycleOwner
 import androidx.navigation.NavController
@@ -63,7 +65,7 @@ fun CameraScreen(
             runningMode = RunningMode.LIVE_STREAM,
             gestureRecognizerListener = object : GestureRecognizerHelper.GestureRecognizerListener {
                 override fun onResults(resultBundle: GestureRecognizerHelper.ResultBundle) {
-                    Log.d("GestureResults", "Gesture recognized with results: ${resultBundle.results}")
+                    gestureResultState.value=resultBundle
                 }
 
                 override fun onError(error: String, errorCode: Int) {
@@ -78,7 +80,9 @@ fun CameraScreen(
         cameraPermissionState.launchPermissionRequest()
     }
 
-    CameraSetup(navController = navController, gestureRecognizerHelper = gestureRecognizerHelper)
+    CameraSetup(navController = navController,
+        gestureRecognizerHelper = gestureRecognizerHelper,
+        gestureResultState)
 }
 
 
@@ -86,7 +90,8 @@ fun CameraScreen(
 
 @SuppressLint("RestrictedApi")
 @Composable
-fun CameraSetup(navController: NavController,gestureRecognizerHelper:GestureRecognizerHelper) {
+fun CameraSetup(navController: NavController,gestureRecognizerHelper:GestureRecognizerHelper,
+                gestureResultState:MutableState<GestureRecognizerHelper.ResultBundle?>) {
 
     lateinit var backgroundExecutor: ExecutorService
     backgroundExecutor=Executors.newSingleThreadExecutor()
@@ -95,20 +100,8 @@ fun CameraSetup(navController: NavController,gestureRecognizerHelper:GestureReco
     val lifecycleOwner: LifecycleOwner = LocalLifecycleOwner.current
     val cameraController: LifecycleCameraController = remember { LifecycleCameraController(context) }
 
-//    val gestureRecognizerHelper = remember {
-//        GestureRecognizerHelper(
-//            context = context,
-//            runningMode=RunningMode.LIVE_STREAM,
-//            gestureRecognizerListener = object : GestureRecognizerHelper.GestureRecognizerListener {
-//                override fun onResults(resultBundle: GestureRecognizerHelper.ResultBundle) {
-//                    // Handle the results here
-//                }
-//                override fun onError(error: String, errorCode: Int) {
-//                    // Handle the error here
-//                }
-//            }
-//        )
-//    }
+
+
 
 // Set the target rotation and backpressure strategy if needed
     cameraController.setImageAnalysisBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
@@ -165,7 +158,22 @@ fun CameraSetup(navController: NavController,gestureRecognizerHelper:GestureReco
                     }
                 }
             )
+
+            var alphabet=""
+            val temp= gestureResultState.value?.results?.get(0)?.gestures()
+            if (temp != null) {
+                if (!(temp.isEmpty())){
+                    val temp2= temp[0][0].categoryName()
+                    alphabet=temp2.toString()
+                }
+            }
+
+            Text(text = "Detected alphabet: ${alphabet}",modifier=Modifier.padding(16.dp).align(Alignment.BottomCenter))
+
         }
+
+
+
     }
 }
 
