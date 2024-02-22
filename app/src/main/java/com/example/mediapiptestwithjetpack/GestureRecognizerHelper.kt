@@ -1,14 +1,18 @@
-package com.example.mediapiptestwithjetpack
+ package com.example.mediapiptestwithjetpack
 
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Matrix
+
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.SystemClock
 import android.util.Log
+import androidx.annotation.OptIn
 import androidx.annotation.VisibleForTesting
+import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageProxy
+import com.example.android.camera.utils.YuvToRgbConverter
 import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.framework.image.MPImage
 import com.google.mediapipe.tasks.core.BaseOptions
@@ -26,6 +30,7 @@ class GestureRecognizerHelper(
     val context: Context,
     val gestureRecognizerListener: GestureRecognizerListener? = null
 ) {
+
 
     // For this example this needs to be a var so it can be reset on changes. If the GestureRecognizer
     // will not change, a lazy val would be preferable.
@@ -98,6 +103,7 @@ class GestureRecognizerHelper(
         }
     }
 
+    @OptIn(ExperimentalGetImage::class)
     // Convert the ImageProxy to MP Image and feed it to GestureRecognizer.
     fun recognizeLiveStream(
         imageProxy: ImageProxy,
@@ -108,7 +114,15 @@ class GestureRecognizerHelper(
         val bitmapBuffer = Bitmap.createBitmap(
             imageProxy.width, imageProxy.height, Bitmap.Config.ARGB_8888
         )
-        imageProxy.use { bitmapBuffer.copyPixelsFromBuffer(imageProxy.planes[0].buffer) }
+
+        val converter = YuvToRgbConverter(context)
+
+        imageProxy.image?.let { image ->
+            converter.yuvToRgb(image, bitmapBuffer)
+            // At this point, bitmapBuffer contains the converted RGB data
+            // You can now use bitmapBuffer for processing, display, etc.
+        }
+
         imageProxy.close()
 
         val matrix = Matrix().apply {
