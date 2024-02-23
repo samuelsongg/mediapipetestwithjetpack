@@ -18,6 +18,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.LifecycleCameraController
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -46,6 +47,7 @@ import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import java.util.concurrent.ExecutorService
+import androidx.compose.foundation.layout.Arrangement
 import java.util.concurrent.Executors
 
 @SuppressLint("PermissionLaunchedDuringComposition")
@@ -158,17 +160,8 @@ fun CameraSetup(navController: NavController,gestureRecognizerHelper:GestureReco
                     }
                 }
             )
+            GestureResults(gestureResultState = gestureResultState)
 
-            var alphabet=""
-            val temp= gestureResultState.value?.results?.get(0)?.gestures()
-            if (temp != null) {
-                if (!(temp.isEmpty())){
-                    val temp2= temp[0][0].categoryName()
-                    alphabet=temp2.toString()
-                }
-            }
-
-            Text(text = "Detected alphabet: ${alphabet}",modifier=Modifier.padding(16.dp).align(Alignment.BottomCenter))
 
         }
 
@@ -179,8 +172,28 @@ fun CameraSetup(navController: NavController,gestureRecognizerHelper:GestureReco
 
 
 @Composable
-fun GestureResults() {
+fun GestureResults(gestureResultState:MutableState<GestureRecognizerHelper.ResultBundle?>,
+                   modifier: Modifier = Modifier) {
     // TODO Text box to display gestures.
+    var alphabet=""
+    var accuracy=0.0f
+    val temp= gestureResultState.value?.results?.get(0)?.gestures()
+    if (temp != null) {
+        if (!(temp.isEmpty())){
+            Log.d("ASD","Testing :${temp}")
+            val extractedCat= temp[0][0].categoryName()
+            val extractedAcc=temp[0][0].score()
+            accuracy=extractedAcc
+            alphabet=extractedCat.toString()
+        }
+    }
+
+    Column(verticalArrangement = Arrangement.Bottom,
+        horizontalAlignment = Alignment.Start,
+        modifier = Modifier.padding(16.dp)) {
+        Text(text = "Detected alphabet: ${alphabet}",modifier=Modifier.padding(16.dp))
+        Text(text = "Accuracy score: ${String.format("%.2f", accuracy)}",modifier=Modifier.padding(16.dp))
+    }
 }
 
 fun recognizeHand(gestureRecognizerHelper: GestureRecognizerHelper, imageProxy: ImageProxy) {
